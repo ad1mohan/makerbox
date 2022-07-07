@@ -1,1 +1,4 @@
-node_modules
+node_modules/
+static/models/MakerBox/MakerBox.blend
+static/models/MakerBox/Karkhana_maker_box.fbx
+static/models/MakerBox/MakerBox.blend1
