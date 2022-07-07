@@ -1,95 +1,143 @@
-import * as THREE from 'three'
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
+import * as THREE from "three";
+import "./style.css";
 
-import './style.css'
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-const sizes = {
-    width:window.innerWidth, 
-    height:window.innerHeight
+import { Stats } from "three/examples/jsm/libs/stats.module.js";
+import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
+console.log(ARButton);
+let container, stats;
+let camera, scene, raycaster, renderer;
+
+let theta = 0;
+let INTERSECTED;
+
+const pointer = new THREE.Vector2();
+const radius = 500;
+const frustumSize = 1000;
+
+init();
+animate();
+
+function init() {
+	container = document.createElement("div");
+	document.body.appendChild(container);
+
+	const aspect = window.innerWidth / window.innerHeight;
+	camera = new THREE.OrthographicCamera(
+		(frustumSize * aspect) / -2,
+		(frustumSize * aspect) / 2,
+		frustumSize / 2,
+		frustumSize / -2,
+		1,
+		1000
+	);
+
+	scene = new THREE.Scene();
+	scene.background = new THREE.Color(0xf0f0f0);
+
+	const light = new THREE.DirectionalLight(0xffffff, 1);
+	light.position.set(1, 1, 1).normalize();
+	scene.add(light);
+
+	const geometry = new THREE.BoxGeometry(20, 20, 20);
+
+	for (let i = 0; i < 2000; i++) {
+		const object = new THREE.Mesh(
+			geometry,
+			new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff })
+		);
+
+		object.position.x = Math.random() * 800 - 400;
+		object.position.y = Math.random() * 800 - 400;
+		object.position.z = Math.random() * 800 - 400;
+
+		object.rotation.x = Math.random() * 2 * Math.PI;
+		object.rotation.y = Math.random() * 2 * Math.PI;
+		object.rotation.z = Math.random() * 2 * Math.PI;
+
+		object.scale.x = Math.random() + 0.5;
+		object.scale.y = Math.random() + 0.5;
+		object.scale.z = Math.random() + 0.5;
+
+		scene.add(object);
+	}
+
+	raycaster = new THREE.Raycaster();
+
+	renderer = new THREE.WebGLRenderer();
+	renderer.setPixelRatio(window.devicePixelRatio);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	container.appendChild(renderer.domElement);
+
+	// stats = new Stats();
+	// container.appendChild(stats.dom);
+
+	document.addEventListener("pointermove", onPointerMove);
+
+	//
+
+	window.addEventListener("resize", onWindowResize);
 }
 
-// Get Canvas DOM
-const canvas = document.querySelector('.webgl-canvas')
+function onWindowResize() {
+	const aspect = window.innerWidth / window.innerHeight;
 
-// Scene
-const scene = new THREE.Scene()
+	camera.left = (-frustumSize * aspect) / 2;
+	camera.right = (frustumSize * aspect) / 2;
+	camera.top = frustumSize / 2;
+	camera.bottom = -frustumSize / 2;
 
-// Grometry (x, y, z) Mesh Material
-const geometry = new THREE.BoxGeometry(1,1,1)
-const material = new THREE.MeshPhongMaterial()
-const mesh = new THREE.Mesh(geometry,material)
-scene.add(mesh)
+	camera.updateProjectionMatrix();
 
-// Camera = PerspectiveCamera(Field_of_view, screen_width/height)
-const camera = new THREE.PerspectiveCamera(75,sizes.width/sizes.height)
-camera.position.z=3
-scene.add(camera)
-
-// Controls
-const controls = new OrbitControls(camera,canvas)
-controls.enableDamping = true
-
-// Lights
-const ambientLight = new THREE.AmbientLight(0xffffff,0.5)
-const pointLight = new THREE.PointLight(0xffffff,0.5)
-pointLight.x = 2
-pointLight.y = 3
-pointLight.z = 4
-scene.add(ambientLight, pointLight)
-
-// Resizing
-window.addEventListener('resize',()=>{
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
-
-    // Update camera
-    camera.aspect = sizes.width/sizes.height
-    camera.updateProjectionMatrix()
-
-    renderer.setSize(sizes.width,sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-})
-
-// full screen
-window.addEventListener('dblclick',()=>{
-    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
-    if(!fullscreenElement){
-        if(canvas.requestFullscreen)
-        {
-            canvas.requestFullscreen()
-        }
-        else if(canvas.webkitRequestFullscreen)
-        {
-            canvas.webkitRequestFullscreen()
-        }
-    }
-    else{
-        if(document.exitFullscreen)
-        {
-            document.exitFullscreen()
-        }
-        else if(canvas.webkitExitFullscreen)
-        {
-            canvas.webkitExitFullscreen()
-        }
-    }
-})
-
-// Renderer
-const renderer = new THREE.WebGLRenderer({
-    canvas,
-})
-// resize renderer
-renderer.setSize(sizes.width,sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-
-// makes the camera zoomed in
-renderer.render(scene,camera)
-
-// Animation
-const tick = ()=>{
-    controls.update()
-    renderer.render(scene,camera)
-    window.requestAnimationFrame(tick)
+	renderer.setSize(window.innerWidth, window.innerHeight);
 }
-tick()
+
+function onPointerMove(event) {
+	pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+}
+
+//
+
+function animate() {
+	requestAnimationFrame(animate);
+
+	render();
+	// stats.update();
+}
+
+function render() {
+	theta += 0.1;
+
+	camera.position.x = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+	camera.position.y = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+	camera.position.z = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+	camera.lookAt(scene.position);
+
+	camera.updateMatrixWorld();
+
+	// find intersections
+
+	raycaster.setFromCamera(pointer, camera);
+
+	const intersects = raycaster.intersectObjects(scene.children, false);
+
+	if (intersects.length > 0) {
+		if (INTERSECTED != intersects[0].object) {
+			if (INTERSECTED)
+				INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+
+			INTERSECTED = intersects[0].object;
+			INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+			INTERSECTED.material.emissive.setHex(0xff0000);
+		}
+	} else {
+		if (INTERSECTED)
+			INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+
+		INTERSECTED = null;
+	}
+
+	renderer.render(scene, camera);
+}
