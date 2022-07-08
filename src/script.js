@@ -50,13 +50,14 @@ function init() {
 	);
 
 	//
+	const geometry = new THREE.BoxBufferGeometry(1, 1, 1).translate(0, 0.1, 0);
+	// const geometry = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32).translate(
+	// 	0,
+	// 	0.1,
+	// 	0
+	// );
 
-	const geometry = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32).translate(
-		0,
-		0.1,
-		0
-	);
-
+	// Target ring / Reticle
 	function onSelect() {
 		if (reticle.visible) {
 			const material = new THREE.MeshPhongMaterial({
